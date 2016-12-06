@@ -65,53 +65,76 @@
 \section*{Assignment}
 
 
-We already have some hand-on experience with P4 in the class by implementing
-source routing protocol. In this assignment, we are going to do the opposite
-way. We will implement a \emph{Traceroute} protocol that each packets is tagged
-with the output port that it departed from a particular switch. For instance, a
-packet from host h1 to h3 traverses through the switch s1 out of port 3 and
-switch s3 also out of port 1. Then, the trace in the packet payload should show
-that Packets have passed 2 hops and the list of ports which are 3 and 1.
+In this assignment, you will use P4 to implement a custom protocol
+that tracks the path UDP packets travel through a network. Your custom
+traceroute header will look like this:
+
+\begin{alltt}
+ num\_valid (4 bytes) | port\_1 (1 byte) | port\_2 (1 byte) | ... | port\_n (1 byte) | payload
+\end{alltt}
+
+\noindent
+When a switch receives an EasyTrace packet, it should append the outgoing port and increment num\_valid by 1. When the recipient receives the packet, it should print the sequence of ports that the packet traversed.
+
+The TA has implemented much of the needed infrastructure for you, and all of the code is available:
+
+\begin{alltt}
+https://github.com/usi-systems/easytrace
+\end{alltt}
+
+\noindent
+You will need to modify two files:
+
+ \begin{itemize}
+ \item \texttt{p4src/p4src/easytrace.p4}: contains the skeleton P4 program for EasyTrace.
+ \item \texttt{commands.txt}: configures the EasyTrace tables.
+ \end{itemize}
+
+ To test your program, you can use the \texttt{run\_demo.sh} script to start Mininet with
+ a test topology. On any of the hosts, you can use  \texttt{client\_server.py} script to send and receive packets.
+ To run in server mode, execute the following command on any host:
+
+ 
+\begin{alltt}
+sudo ./client\_server.py -s
+\end{alltt}
+
+\noindent
+ To run in client mode, execute the following command on any host:
+
+\begin{alltt}
+sudo ./client\_server.py -c <host>
+\end{alltt}
 
 
-To do this, you will write a P4 program and a \emph{commands.txt} file to do the
-following:
+\noindent
+Note that packets will be forwarded by UDP destination port. So, you need to modify the P4 source
+to parse IP, UDP, and EasyTrace headers.
 
-\begin{enumerate}
+We will overload the use of the Ethernet protocol field
+field to indicate whether or not a packet contains an  EasyTrace header.
+We will use a value of (0x6900) to indicate the presence of the header.
 
-\item Define the emph{traceroute_port} header that has only a emph{port} field.
+At the first hop switch, you should check to see if the packet contains a EasyTrace header. If it does
+not (i.e., there is a value in the protocol field other than 0x6900, then you should check if
+the packet is a UDP packet. If it is (i.e., Ethernet protocol is 0x0800 and IP protocol is 17), then
+you can add an EasyTrace header, and modify the Ethernet protocol field to use the 0x6900 value.
 
-\item Create instances of the traceroute\_port header. Note that, it can have a
-\emph{num\_valid} of output ports. HINT: use header stack.
+At subsequent switches, you should check if the  packet contains a EasyTrace header. If it does,
+increment the num\_valid field, and append the port number.
 
-\item Define parsers for traceroute_head and traceroute_port.
+At the client program, you should print the list of ports that the packet passed through.
 
-\item Define \emph{add\_port} action which increases the number of valid ports,
-adds a traceroute\_port header and sets its port field to the output port that
-the packet will depart from.
+You may want to look at the P4 specification for reference:
+  (\url{http://p4.org/wp-content/uploads/2016/11/p4-spec-latest.pdf}):
 
-\item Define the add_traceroute_head which adds the traceroute_head
 
-\item Define a table\label{tbl} that will match on the Ethernet protocol and
-will have two possible actions: \emph{add\_port} and
-\emph{add\_traceroute\_head}.
 
-\item Add the table that is define in~ref{tbl} to the processing pipeline.
-
-\item Finally, you need to configure the table: if the packet matches the
-TRACEROUTE\_PROTOCOL (0x6900), then we only need to execute the add\_port
-action. Otherwise, we have execute the add\_traceroute\_head action.
-
-You may have to look at the P4 specification for more details:
- (\url{http://p4.org/wp-content/uploads/2016/11/p4-spec-latest.pdf}):
-
-\end{enumerate}
-
-\section*{What to hand in}
-\begin{itemize}
-\item The P4 program (p4src/traceroute.p4).
-\item The configuration file (commands.txt).
-\end{itemize}
+ \section*{What to hand in}
+ \begin{itemize}
+ \item The P4 program (p4src/easytrace.p4).
+ \item The configuration file (commands.txt).
+ \end{itemize}
 
 
 \end{document}
