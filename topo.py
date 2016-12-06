@@ -87,6 +87,8 @@ def main():
     net = Mininet(topo = topo,
                   host = P4Host,
                   switch = P4Switch,
+                  autoSetMacs = True,
+                  autoStaticArp = True,
                   controller = None )
     net.start()
 

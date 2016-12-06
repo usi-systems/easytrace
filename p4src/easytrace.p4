@@ -6,6 +6,25 @@ header_type ethernet_t {
     }
 }
 
+header_type ipv4_t {
+    fields {
+        version : 4;
+        ihl : 4;
+        diffserv : 8;
+        totalLen : 16;
+        identification : 16;
+        flags : 3;
+        fragOffset : 13;
+        ttl : 8;
+        protocol : 8;
+        hdrChecksum : 16;
+        srcAddr : 32;
+        dstAddr : 32;
+    }
+}
+/* TODO: define UDP header */
+
+
 header_type easytrace_head_t {
     fields {
         num_valid : 32;
@@ -24,23 +43,37 @@ header_type easytrace_metadata_t {
 
 
 header ethernet_t eth;
+header ipv4_t ipv4;
+
+/* TODO: initialize the UDP header instance */
+
+
 header easytrace_head_t easytrace_head;
+
 /* TODO: initialize the easytrace_port header(s) */
+
 header easytrace_metadata_t ingress_meta;
 
 parser start {
     return parse_ethernet;
 }
 
-#define EASYTRACE_PROTOCOL 0x6900
 parser parse_ethernet {
     extract(eth);
     return select(latest.dl_type) {
-        EASYTRACE_PROTOCOL : parse_head;
-    	default : ingress;
+        0x800 : parse_ipv4;
+        default: ingress;
     }
 }
 
+#define EASYTRACE_PROTOCOL 0xFD
+parser parse_ipv4 {
+    extract(ipv4);
+    /* TODO: parse UDP or EASYTRACE */
+    return ingress;
+}
+
+/* TODO: parse UDP header */
 
 parser parse_head {
     /* TODO: extract header and parse ports if needed */
@@ -67,7 +100,7 @@ action add_port() {
 action add_easytrace_head() {
     /* TODO: add easytrace_head */
     add_port();
-    modify_field(eth.dl_type, EASYTRACE_PROTOCOL);
+    /* Modify the IP protocol to EASYTRACE */
 }
 
 /* TODO: define the easytrace table (HINT: match on the ethernet type) */
@@ -78,7 +111,7 @@ action forward(port) {
 
 table forward_tbl {
     reads {
-        eth.dl_dst : exact;
+        ipv4.dstAddr : exact;
     } actions {
         forward;
         _drop;

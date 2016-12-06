@@ -4,8 +4,8 @@ from scapy.all import *
 import sys
 import argparse
 
-class EasyTrace(Packet):
-    name = "EasyTrace "
+class EasyRoute(Packet):
+    name = "EasyRoute "
     fields_desc = [ XIntField("num_port", 0x0)]
 
 class EasyPort(Packet):
@@ -13,15 +13,12 @@ class EasyPort(Packet):
     fields_desc = [ XByteField("port", 0x1)]
 
 
-bind_layers(Ether, EasyTrace, type=0x6900)
+bind_layers(UDP, EasyRoute, dport=0x6900)
 
+arp_table = {"10.0.0.1": "00:00:00:00:00:01", "10.0.0.2": "00:00:00:00:00:02", "10.0.0.3": "00:00:00:00:00:03"}
 
 def client(args):
-    eth = Ether(src="00:00:00:00:00:01", dst="00:00:00:00:00:03", type=0x6901)
-    if args.trace:
-        p = eth / "Hello"
-    else:
-        p = eth / EasyTrace(num_port=3) / EasyPort(port=2) / EasyPort(port=3) / EasyPort(port=1) / "Hello"
+    p = Ether(dst=arp_table[args.destination]) / IP (dst=args.destination) / UDP(sport=12345, dport=args.port)
     p.show()
     sendp(p, iface = args.interface)
 
@@ -35,14 +32,20 @@ def main():
     parser = argparse.ArgumentParser(description='receiver and sender to test P4 program')
     parser.add_argument("-s", "--server", help="run as server", action="store_true")
     parser.add_argument("-c", "--client", help="run as client", action="store_true")
-    parser.add_argument("-t", "--trace", help="run easy trace", default=True, action="store_true")
+    parser.add_argument("-t", "--trace", help="run trace route", default=True, action="store_true")
     parser.add_argument("-i", "--interface", default='eth0', help="bind to specified interface")
+    parser.add_argument("-p", "--port", type=int, default=0x6901, help="UDP destination Port")
+    parser.add_argument("-d", "--destination", help="IP address of the destination")
     args = parser.parse_args()
 
     if args.server:
         server(args.interface)
     elif args.client:
-        client(args)
+        if args.destination == None:
+            print "Missing destination IP address"
+            parser.print_help()
+        else:
+            client(args)
     else:
         parser.print_help()
 
