@@ -108,17 +108,20 @@ sudo ./client\_server.py -c <host>
 
 
 \noindent
-Note that packets will be forwarded by UDP destination port. So, you need to modify the P4 source
+Note that packets will be forwarded by IP destination. To simplify, you will only need to append the
+EasyTrace header to UDP packets. So, you will need to modify the P4 source
 to parse IP, UDP, and EasyTrace headers.
 
-We will overload the use of the Ethernet protocol field
-field to indicate whether or not a packet contains an  EasyTrace header.
-We will use a value of (0x6900) to indicate the presence of the header.
+We will overload the use of the IP protocol field
+to indicate whether or not a packet contains an  EasyTrace header.
+We will use a value of (0xFD) to indicate the presence of the header.
 
-At the first hop switch, you should check to see if the packet contains a EasyTrace header. If it does
-not (i.e., there is a value in the protocol field other than 0x6900, then you should check if
-the packet is a UDP packet. If it is (i.e., Ethernet protocol is 0x0800 and IP protocol is 17), then
-you can add an EasyTrace header, and modify the Ethernet protocol field to use the 0x6900 value.
+At the first hop switch, you should check to see if the packet
+contains a EasyTrace header. If it does not (i.e., there is a value in
+the protocol field other than 0xFD) then you should check if the
+packet is a UDP packet. If it is (i.e., IP protocol is 0x11) then you can add an EasyTrace header, and
+modify the IP protocol field to use the 0xFD value. The EasyTrace header should follow the UDP header, and
+come before the packet payload.
 
 At subsequent switches, you should check if the  packet contains a EasyTrace header. If it does,
 increment the num\_valid field, and append the port number.
